@@ -13,28 +13,29 @@ comment:  Aufgabenblatt für das RemotLab Wabball
 
 link:     https://github.com/HansGrundig/RemoteLab_Wabball
 
-script:   
 -->
 
 
 
 
-# RemoteLab_Wobball
-> Herzlich Willkommen zu dem RemoteLab Wabball. 
-Einleitung
+# RemoteLab Wobball
+> Herzlich Willkommen zu dem RemoteLab Wabball! 
 
-Stell dir einen smarten Billardtisch vor, der die Bewegung der Kugel präzise verfolgt und sogar die zukünftige Position vorhersagt. Genau das bildet dieses RemoteLab nach: Schritt für Schritt lernst du, wie ein solches System Punkte visualisiert, die Kugelposition ausliest, die Spur aufzeichnet, Geschwindigkeit und Richtung bestimmt und schließlich eine Vorhersage trifft.
+Stell dir einen smarten Billardtisch vor, der die Bewegung der Kugel präzise verfolgt und sogar die zukünftige Position vorhersagt.  
+Genau das bildet dieses RemoteLab nach: Schritt für Schritt lernst du, wie ein solches System Punkte visualisiert, die Kugelposition ausliest, die Spur aufzeichnet, Geschwindigkeit und Richtung bestimmt und schließlich eine Vorhersage trifft.
 
 In diesem Versuch steuerst du eine Kugel auf einer Arduino-gesteuerten beweglichen Plattform. Die Kugel liegt auf einem Display und ihre Position können über die bereitgestellte API ausgelesen werden.
 
-Aufgabenüberblick:
+![Smartes Billard](./.img/SmartesBillard.png) 
+
+## Aufgabenüberblick:
 1. Punkte auf dem Display plotten
 2. Auslesen der Position der Kugel
 3. Bewegungspfad der Kugel darstellen
 4. Geschwindigkeit und Bewegungsrichtung der Kugel bestimmen
 5. Die Bewegungstrajektorie der Kugel vorhersagen 
 
-> [!Hinweis]
+> Hinweis   
 > Die einzelnen Aufgaben sind mit steigender Schwierigkeit aufgebaut und bauen aufeinander auf.
 
 ## Technische Umsetzung:
@@ -42,34 +43,39 @@ Aufgabenüberblick:
   - Auflösung: 800x480 Pixel
   - Schnittstelle: UART (Serial)
   - weitere Informationen: [Nextion Display Datasheet](https://nextion.tech/datasheets/NX8048P050-011R/)
-- Arduino Uno Wifi
-[Arduino Uno Pinout](.img\Pinout-UNOwifirev2_latest-1.png)
----
+
+- Arduino Uno Wifi:
+  - Microcontroller: ATmega328P
+  - Taktfrequenz: 16 MHz
+  - weitere Informationen: [Arduino Uno Wifi Rev2](https://store.arduino.cc/products/arduino-uno-wifi-rev2)
+
+![Arduino Uno Pinout](./.img/Pinout-UNOwifirev2_latest-1.png)
+
 
 ## Aufgabe 1: Punkte auf dem Displays plotten
-
-1.1: Zeichne einen blauen Punkt an der Position **(400, 240)** auf dem Display. Nutze dafür das die Nextionbefehle (siehe Nextion-Dokumentation).
-    [[?]]Über die Funktion void sendNextionCommand(const char *command) kannst du Nextion-Befehle an das Display senden.
-
-Im smarten Billardtisch entspricht das dem ersten Testbild: Der Tisch markiert eine Referenzposition auf dem Spielfeld.
-
+--{{0}}--
+In unserem smarten Billardtisch möchten wir zunächst die Funktionaliät des Displays überprüfen.
+Daher ist deine Aufgabe einen blauen Punkt in  die Mitte des Displays zu plotten.
+Nutze dafür die Nextionbefehle.
 
 **Ziel:** Verstehen, wie Punkte auf dem Display dargestellt werden.
 
+{{1}}
 
-**Hinweise:**
-- Übr die Funktion void sendNextionCommand(const char *command) kannst du Nextion-Befehle an das Display senden.
+> 💡**Hinweise:**
+> Über die Funktion `sendNextionCommand()` kannst du Nextion-Befehle an das Display senden.
+>
+>```cpp
+>void sendNextionCommand(const char *command) {
+>    Serial1.print(command);
+>    Serial1.write(0xFF);
+>    Serial1.write(0xFF);
+>    Serial1.write(0xFF);
+>}
+>```
+>(*siehe [Nextion-Instruction-Set](https://nextion.tech/instruction-set/) )
 
-```cpp
-void sendNextionCommand(const char *command) {
-    Serial1.print(command);
-    Serial1.write(0xFF);
-    Serial1.write(0xFF);
-    Serial1.write(0xFF);
-}
-```
-(*siehe Nextion-Dokumentation*)
-
+--{{2}}--
 **Musterlösung:**
 
 ```cpp 
@@ -79,8 +85,33 @@ sendNextionCommand(cmd);
 
 ```
 
-## Aufgabe 2: Kugelkoordinaten ausgeben
+--{{3}}--
+Wie groß ist der gesendete Nachricht in der Musterlösung (inkl. Terminations bytes)?
 
+    [[20]]
+    [[?]] sprintf wandelt den Befehl in einen String um
+    [[?]] Jedes Zeichen in einem String ist 1 byte
+    [[?]] Beachte Leerzeichen und Kommas
+**************
+
+Die Lösung ist 20, weil:
+
+| Textteil      | Zeichen | Anzahl der Bytes |
+|:------------- | -------:| ----------------:|
+| Der Befehl    |  cirs_  |                5 |
+| X-Koordinate  |   400   |                3 |
+| Y-Koordinate  |   240   |                3 |
+| Punktgröße    |    2    |                1 |
+| 3x Komma      |   ,     |                1 |
+| Farbwert      |   31    |                2 |
+| 3x Stopp Byte |  0xFF   |                1 |
+
+Der string cmd endet mit 1 byte großem \n, welcher am nicht mit geschickt wird
+
+**************
+
+## Aufgabe 2: Kugelkoordinaten ausgeben
+{{0}}
 Lass dir die aktuellen Koordinaten der Kugel ausgeben.
 
 **Hinweis:** Mit der Methode `jiggle()` kannst du die Kugel leicht anstoßen, damit sich ihre Position verändert.
@@ -236,10 +267,20 @@ Am Ende hast du aus einem einfachen Display- und Sensorkonstrukt einen kleinen s
 
 ---
 
-## Abgabe
+## Feedback
 
-Für jede Aufgabe:
+Wie hat dir unsere RemoteLab gefallen?
 
-1. Quellcode dokumentieren.
-2. Kurze Beschreibung der Lösung.
-3. Screenshot oder Foto der Ausgabe bzw. Visualisierung.
+    [(1)] ⭐
+    [(2)] ⭐⭐
+    [(3)] ⭐⭐⭐
+    [(4)] ⭐⭐⭐⭐
+    [(5)] ⭐⭐⭐⭐⭐
+
+Was können wir deiner Meinung nach Verbessern?
+
+    [[___]]
+
+Vielen Danke für deine Teilnahme 💟
+
+
