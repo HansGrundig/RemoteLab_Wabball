@@ -15,6 +15,7 @@ repository:     https://github.com/HansGrundig/RemoteLab_Wabball
 
 import: https://raw.githubusercontent.com/liaTemplates/AVR8js/main/README.md
 
+logo: noch einfügen
 -->
 
 # RemoteLab Wobball

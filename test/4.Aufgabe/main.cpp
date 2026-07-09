@@ -1,8 +1,25 @@
 #include <Arduino.h>
-
 constexpr uint32_t kMonitorBaud = 9600;
-constexpr uint32_t kNextionBaud = 115200; // UPGRADED TO MAXIMUM SPEED
+constexpr uint32_t kNextionBaud = 115200; 
 
+// ====================================================================
+// --- 1. GLOBALE KONSTANTEN ---
+// ====================================================================
+const int16_t MAX_WIDTH = 800; 
+const int16_t MAX_HEIGHT = 480;
+
+const float WALL_LEFT = 33.0;
+const float WALL_RIGHT = 769.0;
+const float WALL_TOP = 57.0;
+const float WALL_BOTTOM = 456.0;
+
+// --- KALIBRIERUNG (Nur noch diese beiden Werte sind fest) ---
+const float GRAVITY_SCALE = 6500.0; // Wie stark sich 1G Neigung auf die Pixel-Beschleunigung auswirkt
+const float BOUNCE_FACTOR = 0.48;   // Energie, die nach dem Abprallen an der Wand übrig bleibt (75%)
+
+// ====================================================================
+// --- 2. HILFSFUNKTIONEN & STRUKTUREN ---
+// ====================================================================
 void sendNextionCommand(const char *command) {
     Serial1.print(command);
     Serial1.write(0xFF);
@@ -12,32 +29,27 @@ void sendNextionCommand(const char *command) {
 
 void clearNextionGraphics() {
     sendNextionCommand("ref 0"); 
-    Serial.println("Screen graphics wiped.");
 }
 
+// ====================================================================
+// --- 4. ARDUINO SETUP ---
+// ====================================================================
 void setup() {
     Serial.begin(kMonitorBaud);
 
-    // 1. Connect at Nextion's default boot speed
     Serial1.begin(9600);
     delay(500);
-    
-    // 2. Command the Nextion to enter hyperspeed
     sendNextionCommand("baud=115200"); 
     delay(100);
-    
-    // 3. Reconnect the Arduino at the new high speed
     Serial1.begin(kNextionBaud);
-
     delay(1000);
-    //sendNextionCommand("bkcmd=0");
-    //sendNextionCommand("sendxy=1");
 
-    Serial.println("Nextion Tracker Ready at 115200 Baud!");
-    //start with blank screen
     clearNextionGraphics();
 }
 
+// ====================================================================
+// --- 5. MAIN LOOP ---
+// ====================================================================
 void loop() {
     static uint8_t state = 0;
     static uint8_t data[7]; 

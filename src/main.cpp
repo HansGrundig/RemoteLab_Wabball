@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Arduino_LSM6DS3.h> // Bibliothek für die Onboard-IMU
+#include <Wire.h>
 
 constexpr uint32_t kMonitorBaud = 9600;
 constexpr uint32_t kNextionBaud = 115200; 
