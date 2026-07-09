@@ -1,5 +1,5 @@
 #include <Arduino.h>
-
+#include <NextionControl.h>
 
 constexpr uint32_t kMonitorBaud = 9600;
 constexpr uint32_t kNextionBaud = 115200; 
@@ -11,20 +11,6 @@ constexpr uint32_t kNextionBaud = 115200;
 const int16_t MAX_WIDTH = 800; 
 const int16_t MAX_HEIGHT = 480;
 
-// ====================================================================
-// --- 2. HILFSFUNKTIONEN & STRUKTUREN ---
-// ====================================================================
-
-void sendNextionCommand(const char *command) {
-    Serial1.print(command);
-    Serial1.write(0xFF);
-    Serial1.write(0xFF);
-    Serial1.write(0xFF);
-}
-
-void clearNextionGraphics() {
-    sendNextionCommand("ref 0"); 
-}
 
 // ====================================================================
 // --- 4. ARDUINO SETUP ---

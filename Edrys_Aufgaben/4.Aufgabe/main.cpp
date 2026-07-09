@@ -1,10 +1,14 @@
 #include <Arduino.h>
+#include <NextionControl.h>
+#include <jiggle.h>
+
 constexpr uint32_t kMonitorBaud = 9600;
 constexpr uint32_t kNextionBaud = 115200; 
 
 // ====================================================================
 // --- 1. GLOBALE KONSTANTEN ---
 // ====================================================================
+
 const int16_t MAX_WIDTH = 800; 
 const int16_t MAX_HEIGHT = 480;
 
@@ -12,24 +16,6 @@ const float WALL_LEFT = 33.0;
 const float WALL_RIGHT = 769.0;
 const float WALL_TOP = 57.0;
 const float WALL_BOTTOM = 456.0;
-
-// --- KALIBRIERUNG (Nur noch diese beiden Werte sind fest) ---
-const float GRAVITY_SCALE = 6500.0; // Wie stark sich 1G Neigung auf die Pixel-Beschleunigung auswirkt
-const float BOUNCE_FACTOR = 0.48;   // Energie, die nach dem Abprallen an der Wand übrig bleibt (75%)
-
-// ====================================================================
-// --- 2. HILFSFUNKTIONEN & STRUKTUREN ---
-// ====================================================================
-void sendNextionCommand(const char *command) {
-    Serial1.print(command);
-    Serial1.write(0xFF);
-    Serial1.write(0xFF);
-    Serial1.write(0xFF);
-}
-
-void clearNextionGraphics() {
-    sendNextionCommand("ref 0"); 
-}
 
 // ====================================================================
 // --- 4. ARDUINO SETUP ---
@@ -59,10 +45,8 @@ void loop() {
     // We initialize them to -1 so we know they are empty at the start
     static int16_t pathX[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
     static int16_t pathY[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
-    static uint32_t pathTime[10] = {0}; // NEW: Stores the exact timestamp for every dot
+    static uint32_t pathTime[10] = {0}; 
 
-    static int16_t lastPredX = -1;
-    static int16_t lastPredY = -1;
     static int16_t lastpathX =-1;
     static int16_t lastpathY =-1;
     static uint32_t lastTouchTime = 0;
@@ -71,15 +55,13 @@ void loop() {
     const int16_t MAX_WIDTH = 800; 
     const int16_t MAX_HEIGHT = 480;
 
-    static uint32_t lastPointTime = 0; // NEW: Tracks the exact time of the last valid dot
+    static uint32_t lastPointTime = 0; 
     static uint32_t velocity = 0;
-
 
 
     // 1. 5-SECOND WIPE: If no touches for 2 seconds, clear the screen and reset
     if (screenHasGraphics && (millis() - lastTouchTime > 5000)) {
-        clearNextionGraphics();
-        lastPredX = -1;         
+        clearNextionGraphics();   
         screenHasGraphics = false; 
         
         // Empty the snake buffer
@@ -126,13 +108,7 @@ void loop() {
                 char cmd[64];
 
                 // --- STEP A: CLEANUP OLD GRAPHICS ---
-                // 1. Erase the old Red Prediction dot
-                if (lastPredX != -1) {
-                    sprintf(cmd, "line %d,%d,%d,%d,65535",lastpathX,lastpathY, lastPredX, lastPredY);
-                    sendNextionCommand(cmd);
-                }
-
-                // 2. Erase the oldest Green Tail dot (if the buffer is full)
+                // 1. Erase the oldest Green Tail dot (if the buffer is full)
                 if (pathX[0] != -1) {
                     sprintf(cmd, "cirs %d,%d,6,65535", pathX[0], pathY[0]);
                     sendNextionCommand(cmd);
@@ -176,7 +152,6 @@ void loop() {
                     Serial.println(velocityPPS);
 
                     // 4. Calculate the direction in degrees
-                   // By putting dx first and -dy second, 0 degrees points straight UP.
                     float angleRads = atan2(dx, -dy);
                     float direction = angleRads * 180.0 / PI;
 
@@ -186,28 +161,6 @@ void loop() {
                     }
                     Serial.print("Direction in Degree: ");
                     Serial.println(direction,3);
-
-                    // 2. Project the line forward. 
-                    // 'multiplier' controls how far ahead the line looks.
-                    // Because we skipped dividing by 4, a multiplier of '2' 
-                    // means the line projects 8 "steps" into the future.
-                    int multiplier = 2; 
-
-                    int16_t predX = pathX[9] + (dx * multiplier);
-                    int16_t predY = pathY[9] + (dy * multiplier);
-
-
-                    // Constrain to screen limits so the Nextion doesn't crash
-                    predX = constrain(predX, 0, MAX_WIDTH - 1);
-                    predY = constrain(predY, 0, MAX_HEIGHT - 1);
-
-                    // Draw new Red prediction line
-                    sprintf(cmd, "line %d,%d,%d,%d,63488", pathX[9], pathY[9], predX, predY);
-                    sendNextionCommand(cmd);
-
-                    // Save values so we can erase this exact line on the next loop
-                    lastPredX = predX;
-                    lastPredY = predY;
                     
                     // Assuming you defined these variables earlier to track the base of the line!
                     lastpathX = pathX[9]; 

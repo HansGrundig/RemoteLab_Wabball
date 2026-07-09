@@ -1,6 +1,6 @@
 #include <Arduino.h>
-#include <Arduino_LSM6DS3.h> // Bibliothek für die Onboard-IMU
 #include <Wire.h>
+#include <NextionControl.h>
 
 constexpr uint32_t kMonitorBaud = 9600;
 constexpr uint32_t kNextionBaud = 115200; 
@@ -23,16 +23,6 @@ const float BOUNCE_FACTOR = 0.48;   // Energie, die nach dem Abprallen an der Wa
 // ====================================================================
 // --- 2. HILFSFUNKTIONEN & STRUKTUREN ---
 // ====================================================================
-void sendNextionCommand(const char *command) {
-    Serial1.print(command);
-    Serial1.write(0xFF);
-    Serial1.write(0xFF);
-    Serial1.write(0xFF);
-}
-
-void clearNextionGraphics() {
-    sendNextionCommand("ref 0"); 
-}
 
 struct PointData {
     int16_t x;
