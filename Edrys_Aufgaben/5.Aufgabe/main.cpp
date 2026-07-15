@@ -11,10 +11,10 @@ constexpr uint32_t kNextionBaud = 115200;
 // ====================================================================
 const int16_t MAX_WIDTH = 800; 
 const int16_t MAX_HEIGHT = 480;
-const float WALL_LEFT = 33.0;
-const float WALL_RIGHT = 769.0;
-const float WALL_TOP = 57.0;
-const float WALL_BOTTOM = 456.0;
+const float WALL_LEFT = 47.0;
+const float WALL_RIGHT = 748.0;
+const float WALL_TOP = 55.0;
+const float WALL_BOTTOM = 425.0;
 
 // --- KALIBRIERUNG ---
 const float GRAVITY_SCALE = 6500.0; 

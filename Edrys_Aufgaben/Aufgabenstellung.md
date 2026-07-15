@@ -89,7 +89,7 @@ Nutze dafür die Nextionbefehle.
 {{1}}
 
 > [!Note] 💡 Hinweis:
-> Über die Funktion `sendNextionCommand()` kannst du Nextion-Befehle an das Display senden.
+> Über die Funktion `sendNextionCommand()` kannst du Nextion-Befehle an das Display senden. Der Befehl ist in der `Nextio nControl.h`-Bibliothek implementiert.
 >
 >```cpp
 >void sendNextionCommand(const char *command) {
@@ -192,7 +192,7 @@ y = ...
 
 
 > [!Note] 💡 Hinweis:
-> Mit der Methode `jiggle()` kannst du die Kugel leicht anstoßen, damit sich ihre Position verändert.
+> Mit der Methode `jiggle()` kannst du die Kugel leicht anstoßen, damit sich ihre Position verändert. DIese Methode ist in der `jiggle.h`-Bibliothek implementiert. Außerdem müssen die Servos in der `setup()`-Methode mit der Funktion `initJiggle(pinS1,pinS2,pinS3)` initialisiert werden, damit die Methode `jiggle()` funktioniert.
 
 ### Exkurs: Nextion Resistiver Touchscreen
 Der Nextion NX8048P050-011R Touchscreen ist ein resistiver Touchscreen, der auf Druck reagiert.
@@ -202,6 +202,56 @@ Dabei wird durch Druck auf die Oberfläche ein elektrischer Kontakt von zwei Ele
 
 weitere Informationen: [Resistiver Touchscreen](https://www.leifiphysik.de/elektrizitaetslehre/komplexere-schaltkreise/ausblick/resistiver-touchscreen)
 
+### **Code zum Ausfüllen**
+
+```cpp
+
+void loop(){
+    if (Serial.available()) {
+        char input = Serial.read();
+        
+        if (input == 'j' || input == 'J') {
+            clearNextionGraphics();
+
+            Serial.println("-> Fuehre Jiggle aus...");
+            .... //Initialisiere die Servos
+            Serial.println("-> Jiggle beendet.");
+            
+            while (Serial1.available()) Serial1.read();
+        }
+    }
+    while (Serial1.available()) {
+    // Nächstes Byte aus dem Nextion-Stream lesen.
+    uint8_t b = static_cast<uint8_t>(Serial1.read());
+
+    // Auf das Startbyte der Positionsnachricht warten.
+    if (state == 0) {
+        if (b == 0x68) { 
+            // Neue Nachricht beginnt: Buffer zurücksetzen.
+            index = 0;
+            state = 1;
+        }
+        continue;
+    }
+
+    // Weitere Bytes der Nachricht im Puffer sammeln.
+    data[index++] = b;
+    if (index < 7) continue; 
+
+    // Eine vollständige Nachricht endet mit drei 0xFF-Bytes.
+    if (data[4] == 0xFF && data[5] == 0xFF && data[6] == 0xFF) {
+        // Zwei 8-Bit-Werte zu einem 16-Bit-X- und Y-Wert zusammensetzen.
+        int16_t x = (static_cast<int16_t>(data[1]) << 8) | data[0];
+        int16_t y = (static_cast<int16_t>(data[3]) << 8) | data[2];
+
+
+    ....//x und y auf dem Serial Monitor ausgeben
+
+    }}
+   
+}
+
+```
 
 ### **Musterlösung**
 
@@ -235,7 +285,9 @@ void setup() {
     delay(100);
     Serial1.begin(kNextionBaud);
     delay(1000);
-
+    initJiggle(9, 6, 5);
+    Serial.println("System Ready!");
+    Serial.println("-> Druecke 'j' zum Wackeln (Jiggle)");
     clearNextionGraphics();
 }
 
@@ -318,6 +370,148 @@ Plotte kontinuierlich den zurückgelegten Pfad der Kugel.
 
 **Ziel:** Die Bewegung der Kugel als Spur darstellen.
 
+### **Code zum Ausfüllen**
+
+```cpp
+
+#include <Arduino.h>
+#include <NextionControl.h>
+#include <jiggle.h>
+
+constexpr uint32_t kMonitorBaud = 9600;
+constexpr uint32_t kNextionBaud = 115200; 
+
+// ====================================================================
+// --- 1. GLOBALE KONSTANTEN ---
+// ====================================================================
+
+const int16_t MAX_WIDTH = 800; 
+const int16_t MAX_HEIGHT = 480;
+
+// ====================================================================
+// --- 4. ARDUINO SETUP ---
+// ====================================================================
+
+void setup() {
+    Serial.begin(kMonitorBaud);
+
+    Serial1.begin(9600);
+    delay(500);
+    sendNextionCommand("baud=115200"); 
+    delay(100);
+    Serial1.begin(kNextionBaud);
+    delay(1000);
+    initJiggle(9, 6, 5);
+    clearNextionGraphics();
+    Serial.println("System Ready!");
+    Serial.println("-> Druecke 'j' zum Wackeln (Jiggle)");
+}
+
+// ====================================================================
+// --- 5. MAIN LOOP ---
+// ====================================================================
+
+void loop() {
+    static uint8_t state = 0;
+    static uint8_t data[7]; 
+    static uint8_t index = 0;
+    
+    // SNAKE-PUFFER (enthält die letzten 10 Punkte)
+    // Initialisiert mit -1, damit leere Einträge erkennbar sind
+    static int16_t pathX[10] = ...
+    static int16_t pathY[10] = ...
+
+    static int16_t lastpathX = ...
+    static int16_t lastpathY = ....
+    static uint32_t lastTouchTime = 0;
+    static bool screenHasGraphics = false;
+
+    const int16_t MAX_WIDTH = 800; 
+    const int16_t MAX_HEIGHT = 480;
+
+
+    // 1. 5-Sekunden-Reset: Wenn 5s keine Berührung, Bildschirm löschen und zurücksetzen
+    if (screenHasGraphics && (millis() - lastTouchTime > 5000)) {
+        clearNextionGraphics();      
+        screenHasGraphics = false; 
+        
+        // Empty the snake buffer
+        for(int i = 0; i < 10; i++) {
+            pathX[i] = -1; 
+            pathY[i] = -1;
+        }
+    }
+
+    if (Serial.available()) {
+        char input = Serial.read();
+        
+        if (input == 'j' || input == 'J') {
+            clearNextionGraphics();
+            screenHasGraphics = false; 
+            
+            //lösche Snkae-Puffer wenn neu gestartet wird
+            ....
+
+            Serial.println("-> Fuehre Jiggle aus...");
+            ....
+            Serial.println("-> Jiggle beendet.");
+            
+            while (Serial1.available()) Serial1.read();
+        }
+    }
+    // 2. Auf benutzerdefinierte Nextion-Daten hören
+    while (Serial1.available()) {
+        uint8_t b = static_cast<uint8_t>(Serial1.read());
+
+        if (state == 0) {
+            if (b == 0x68) { 
+                index = 0;
+                state = 1;
+            }
+            continue;
+        }
+
+        data[index++] = b;
+        if (index < 7) continue; 
+
+        if (data[4] == 0xFF && data[5] == 0xFF && data[6] == 0xFF) {
+            
+            int16_t x = (static_cast<int16_t>(data[1]) << 8) | data[0];
+            int16_t y = (static_cast<int16_t>(data[3]) << 8) | data[2];
+
+            lastTouchTime = millis();
+            screenHasGraphics = true;
+            
+            // Nur aktualisieren, wenn sich die Berührungsposition geändert hat
+            if (pathX[9] == -1 || abs(x - pathX[9]) > 2 || abs(y - pathY[9]) > 2) { 
+                
+                char cmd[64];
+
+                // --- SCHRITT A: ALTE GRAFIK ENTFERNEN ---
+                // Ältesten grünen Punkt löschen (falls Puffer voll)
+                if (pathX[0] != -1) {
+                    
+                }
+
+                // --- SCHRITT B: HISTORIE VERSCHIEBEN ---
+                for (int i = 0; i < 9; i++) {
+  
+                }
+                
+                // --- SCHRITT C: NEUEN PUNKT HINZUFÜGEN & ZEICHNEN ---
+                    
+                // Letzte Punkt-Koordinaten aktualisieren
+
+            }
+
+            
+        }
+        state = 0;
+        index = 0;
+    }
+}
+
+```
 ### Musterlösung
 
 ```cpp
@@ -365,7 +559,6 @@ void loop() {
     // Initialisiert mit -1, damit leere Einträge erkennbar sind
     static int16_t pathX[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
     static int16_t pathY[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
-    static uint32_t pathTime[10] = {0}; 
 
     static int16_t lastpathX = -1;
     static int16_t lastpathY = -1;
@@ -374,10 +567,6 @@ void loop() {
 
     const int16_t MAX_WIDTH = 800; 
     const int16_t MAX_HEIGHT = 480;
-
-    static uint32_t lastPointTime = 0; // Verfolgt die Zeit des letzten gültigen Punktes
-    static uint32_t velocity = 0;
-
 
 
     // 1. 5-Sekunden-Reset: Wenn 5s keine Berührung, Bildschirm löschen und zurücksetzen
@@ -450,13 +639,11 @@ void loop() {
                 for (int i = 0; i < 9; i++) {
                     pathX[i] = pathX[i+1];
                     pathY[i] = pathY[i+1];
-                    pathTime[i] = pathTime[i+1]; 
                 }
                 
                 // --- SCHRITT C: NEUEN PUNKT HINZUFÜGEN & ZEICHNEN ---
                 pathX[9] = x;
                 pathY[9] = y;
-                pathTime[9] = millis();
 
                 sprintf(cmd, "cirs %d,%d,3,31", x, y);
                 sendNextionCommand(cmd);
@@ -494,6 +681,212 @@ Richtung: 137.5°
 >* Die Richtung kann über den Winkel zwischen den beiden Positionen bestimmt werden.
 
 **Ziel:** Bewegungsdaten der Kugel auswerten.
+
+### **Code zum Ausfüllen**
+
+```cpp
+
+#include <Arduino.h>
+#include <NextionControl.h>
+#include <jiggle.h>
+
+constexpr uint32_t kMonitorBaud = 9600;
+constexpr uint32_t kNextionBaud = 115200; 
+
+// ====================================================================
+// --- 1. GLOBALE KONSTANTEN ---
+// ====================================================================
+
+const int16_t MAX_WIDTH = 800; 
+const int16_t MAX_HEIGHT = 480;
+
+const float WALL_LEFT = 33.0;
+const float WALL_RIGHT = 769.0;
+const float WALL_TOP = 57.0;
+const float WALL_BOTTOM = 456.0;
+
+// ====================================================================
+// --- 4. ARDUINO SETUP ---
+// ====================================================================
+void setup() {
+    Serial.begin(kMonitorBaud);
+
+    Serial1.begin(9600);
+    delay(500);
+    sendNextionCommand("baud=115200"); 
+    delay(100);
+    Serial1.begin(kNextionBaud);
+    delay(1000);
+
+    // Servos initialisieren
+
+    clearNextionGraphics();
+}
+
+// ====================================================================
+// --- 5. MAIN LOOP ---
+// ====================================================================
+void loop() {
+    static uint8_t state = 0;
+    static uint8_t data[7]; 
+    static uint8_t index = 0;
+    
+    // SNAKE-PUFFER (enthält die letzten 10 Punkte)
+    // Initialisiert mit -1, damit leere Einträge erkennbar sind
+    static int16_t pathX[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    static int16_t pathY[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    static uint32_t pathTime[10] = {0}; 
+
+    static int16_t lastpathX = -1;
+    static int16_t lastpathY = -1;
+    static uint32_t lastTouchTime = 0;
+    static bool screenHasGraphics = false;
+
+    const int16_t MAX_WIDTH = 800; 
+    const int16_t MAX_HEIGHT = 480;
+
+    static uint32_t lastPointTime = 0; 
+    static uint32_t velocity = 0;
+
+
+    // 1. 5-Sekunden-Reset: Wenn 5s keine Berührung, Bildschirm löschen und zurücksetzen
+    if (screenHasGraphics && (millis() - lastTouchTime > 5000)) {
+        clearNextionGraphics();   
+        screenHasGraphics = false; 
+        
+        // Empty the snake buffer
+        for(int i = 0; i < 10; i++) {
+            pathX[i] = -1; 
+            pathY[i] = -1;
+        }
+    }
+
+    if (Serial.available()) {
+        char input = Serial.read();
+        
+        if (input == 'j' || input == 'J') {
+            clearNextionGraphics();
+            screenHasGraphics = false; 
+            
+            // Puffer leeren
+            for(int i = 0; i < 10; i++) {
+                pathX[i] = -1; 
+                pathY[i] = -1;
+            }
+
+            Serial.println("-> Fuehre Jiggle aus...");
+            ...
+            Serial.println("-> Jiggle beendet.");
+            
+            // Empfangspuffer flushen
+            while (Serial1.available()) Serial1.read();
+        }
+    }
+    
+    // 2. Auf benutzerdefinierte Nextion-Daten hören
+    while (Serial1.available()) {
+        uint8_t b = static_cast<uint8_t>(Serial1.read());
+
+        if (state == 0) {
+            if (b == 0x68) { 
+                index = 0;
+                state = 1;
+            }
+            continue;
+        }
+
+        data[index++] = b;
+        if (index < 7) continue; 
+
+        if (data[4] == 0xFF && data[5] == 0xFF && data[6] == 0xFF) {
+            
+            int16_t x = (static_cast<int16_t>(data[1]) << 8) | data[0];
+            int16_t y = (static_cast<int16_t>(data[3]) << 8) | data[2];
+
+            lastTouchTime = millis();
+            screenHasGraphics = true;
+
+            // --- DELTA-ZEIT BERECHNUNG ---
+            uint32_t currentTime = millis();
+            uint32_t dt = .... // 'dt' ist die exakte Millisekunden zwischen Punkten
+            ... // Zeit für den NÄCHSTEN Punkt speichern
+
+            // Sicherheitscheck: Vermeidet Division durch Null, falls Pakete sofort eintreffen
+            
+            
+            // Nur aktualisieren, wenn sich die Berührungsposition geändert hat
+            if (...) { 
+                
+                char cmd[64];
+
+                // --- SCHRITT A: ALTE GRAFIK ENTFERNEN ---
+                // 1. Ältesten grünen Punkt löschen (falls Puffer voll)
+                if (pathX[0] != -1) {
+
+                }
+
+                // --- SCHRITT B: HISTORIE VERSCHIEBEN ---
+                for (int i = 0; i < 9; i++) {
+                    pathX[i] = pathX[i+1];
+                    pathY[i] = pathY[i+1];
+                    pathTime[i] = pathTime[i+1]; 
+                }
+                
+                // --- SCHRITT C: NEUEN PUNKT HINZUFÜGEN & ZEICHNEN ---
+                pathX[9] = x;
+                pathY[9] = y;
+                pathTime[9] = millis();
+
+                sprintf(cmd, "cirs %d,%d,3,31", x, y);
+                sendNextionCommand(cmd);
+
+                // --- SCHRITT D: BERECHNUNGEN ---
+                // Warten, bis mindestens 5 Punkte im Puffer sind
+                if (...) {
+                    
+                    // 1. Gesamtdifferenz über die letzten 5 Punkte berechnen
+                    int16_t dx = ....
+                    int16_t dy = ....
+
+                    // 2. Exakte Zeitspanne über dieses 5-Punkte-Fenster
+                    uint32_t totalDt = pathTime[9] - pathTime[5];
+                    if (totalDt == 0) totalDt = 1; // Vermeidet Division durch Null
+
+                    // 3. Geschwindigkeit berechnen
+                    // Pythagoras zur Berechnung der zurückgelegten Pixel-Distanz
+                    float distance = sqrt(...);
+
+                    // Geschwindigkeit in Pixel pro Sekunde (ms -> s: *1000)
+                    int16_t velocityPPS = ....;
+
+                    Serial.print("Velocity in PPS=");
+                    Serial.println(velocityPPS);
+
+                    // 4. Richtung in Grad berechnen
+                    float angleRads = atan2(dx, -dy);
+                    float direction = ...; // Umrechnung in Grad
+
+                    // Normalisieren auf 0-360
+
+
+                    Serial.print("Direction in Degree: ");
+                    Serial.println(direction,3);
+                    
+                    // Letzte Punkt-Koordinaten aktualisieren
+                    lastpathX = pathX[9]; 
+                    lastpathY = pathY[9]; 
+                }
+            }
+
+            
+        }
+        state = 0;
+        index = 0;
+    }
+}
+
+
+```
 
 ### Musterlösung
 ```cpp
@@ -714,10 +1107,11 @@ Schreibe eine Funktion, die unter Verwendung der aktuellen Position, Geschwindig
 
 **Ziel:** Einführung in Bewegungsmodelle und Vorhersage von Positionen.
 
-### Musterlösung
+### **Code zum Ausfüllen**
 
 ```cpp
-    #include <Arduino.h>
+
+#include <Arduino.h>
 #include <NextionControl.h>
 #include <MPU6050.h>
 #include <jiggle.h> 
@@ -734,6 +1128,285 @@ const float WALL_LEFT = 33.0;
 const float WALL_RIGHT = 769.0;
 const float WALL_TOP = 57.0;
 const float WALL_BOTTOM = 456.0;
+
+// --- KALIBRIERUNG ---
+const float GRAVITY_SCALE = 6500.0; 
+const float BOUNCE_FACTOR = 0.48;   
+
+MPU6050 mpu;
+
+// ====================================================================
+// --- 2. DIE PRÄDIKTION (Physik-Engine) ---
+// ====================================================================
+void predict(int16_t pathX[10], int16_t pathY[10], uint32_t pathTime[10]) {
+    if (pathX[0] == -1 || pathX[9] == -1) return;
+
+    char cmd[64];
+
+    // Geschwindigkeit & Reibung aus dem Puffer berechnen
+    float dt_start = (pathTime[4] - pathTime[0]) / 1000.0;
+    if (dt_start < 0.001) dt_start = 0.001;
+    // Distanz zwischen den Punkten 0 und 4
+    float dist_start = ...;
+    float v_start = ...;
+    // Mittlere Zeit zwischen den Punkten 0 und 4
+    float t_mid_start = ...;
+
+    float dt_end = ...;
+    if (dt_end < 0.001) dt_end = 0.001;
+    float dist_end = ...;
+    float v_end = ...;
+    float t_mid_end = ...;
+
+    float t_diff = t_mid_end - t_mid_start;
+    float acceleration = ...;
+    float live_friction = -acceleration;
+
+    if (live_friction < 20.0) live_friction = 100.0;
+    
+    // Start-Vektor
+    float vx = (pathX[9] - pathX[5]) / dt_end;
+    float vy = (pathY[9] - pathY[5]) / dt_end;
+
+    // Neigung des Tisches über externe MPU6050
+    int16_t ax, ay, az;
+    mpu.getAcceleration(&ax, &ay, &az);
+    float ax_g = (float)ax / 16384.0;
+    float ay_g = (float)ay / 16384.0;
+    float gx = -ay_g * GRAVITY_SCALE; 
+    float gy = -ax_g * GRAVITY_SCALE;
+
+    // Euler-Physik simulieren
+    float simX = pathX[9];
+    float simY = pathY[9];
+    float lastDrawX = simX;
+    float lastDrawY = simY;
+    float dt = 0.02;     
+    int max_steps = 400; 
+
+    for (int step = 0; step < max_steps; step++) {
+        vx += gx * dt;
+        vy += gy * dt;
+
+        float current_speed = sqrt(vx*vx + vy*vy);
+        float speed_drop = live_friction * dt;
+
+        if (current_speed > 0) {
+            if (current_speed < speed_drop) {
+                vx = 0; vy = 0; current_speed = 0; 
+            } else {
+                float multiplier = (current_speed - speed_drop) / current_speed;
+                vx *= multiplier;
+                vy *= multiplier;
+            }
+        }
+
+        float gravity_magnitude = sqrt(gx*gx + gy*gy);
+        if (current_speed == 0 && gravity_magnitude <= live_friction) break; 
+
+        simX += vx * dt;
+        simY += vy * dt;
+
+        if (simX <= WALL_LEFT)   { simX = WALL_LEFT;   vx = -vx * BOUNCE_FACTOR; }
+        if (simX >= WALL_RIGHT)  { simX = WALL_RIGHT;  vx = -vx * BOUNCE_FACTOR; }
+        if (simY <= WALL_TOP)    { simY = WALL_TOP;    vy = -vy * BOUNCE_FACTOR; }
+        if (simY >= WALL_BOTTOM) { simY = WALL_BOTTOM; vy = -vy * BOUNCE_FACTOR; }
+
+        if (step % 3 == 0) {
+            sprintf(cmd, "line %d,%d,%d,%d,33840", (int)lastDrawX, (int)lastDrawY, (int)simX, (int)simY);
+            sendNextionCommand(cmd);
+            lastDrawX = simX;
+            lastDrawY = simY;
+        }
+    }
+
+    // Zielfadenkreuz am Ende zeichnen
+    sprintf(cmd, "line %d,%d,%d,%d,64512", (int)lastDrawX, (int)lastDrawY, (int)simX, (int)simY);
+    sendNextionCommand(cmd);
+    sprintf(cmd, "cir %d,%d,15,63488", (int)simX, (int)simY);
+    sendNextionCommand(cmd);
+    sprintf(cmd, "line %d,%d,%d,%d,63488", (int)simX-5, (int)simY, (int)simX+5, (int)simY);
+    sendNextionCommand(cmd);
+    sprintf(cmd, "line %d,%d,%d,%d,63488", (int)simX, (int)simY-5, (int)simX, (int)simY+5);
+    sendNextionCommand(cmd);
+}
+
+// ====================================================================
+// --- 3. ARDUINO SETUP ---
+// ====================================================================
+void setup() {
+    Serial.begin(kMonitorBaud);
+    
+    Wire.begin();
+    mpu.initialize();
+    
+    // Servos initialisieren
+    initJiggle(9, 6, 5);
+    
+    Serial1.begin(9600);
+    delay(500);
+    sendNextionCommand("baud=115200");
+    delay(100);
+    Serial1.begin(kNextionBaud);
+    delay(1000);
+    
+    clearNextionGraphics();
+    Serial.println("System Ready!");
+    Serial.println("-> Druecke 'j' zum Wackeln (Jiggle)");
+    Serial.println("-> Druecke 'p' fuer Aufnahme & Vorhersage");
+}
+
+// ====================================================================
+// --- 4. MAIN LOOP ---
+// ====================================================================
+void loop() {
+    static uint8_t state = 0;
+    static uint8_t data[7]; 
+    static uint8_t index = 0;
+    
+    static int16_t pathX[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    static int16_t pathY[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    static uint32_t pathTime[10] = {0}; 
+    
+    static uint32_t lastTouchTime = 0;
+    static bool screenHasGraphics = false;
+    static uint32_t lastPredictTime = 0;
+
+    // --- Aufnahme-Status ---
+    static bool isRecording = false;
+
+    // 1. Serielle Eingabe vom Terminal  verarbeiten
+    if (Serial.available()) {
+        char input = Serial.read();
+        
+        if (input == 'j' || input == 'J') {
+            clearNextionGraphics();
+            
+            // Prädiktion und Aufnahme explizit stoppen 
+            ....
+            
+            // Puffer leeren, damit keine alten Punkte gezeichnet werden 
+            ....
+
+            Serial.println("-> Führe Jiggle aus...");
+            ....
+            Serial.println("-> Jiggle beendet. Prädiktion gestoppt.");
+            
+            // Empfangspuffer flushen, damit Mülldaten vom Wackeln gelöscht werden
+            while (Serial1.available()) Serial1.read();
+        }
+        else if (input == 'r' || input == 'R'){
+            // Display zurücksetzen
+            ...
+        }
+        else if (input == 'p' || input == 'P') {
+            Serial.println("-> Starte Aufzeichnung & Prädiktion!");
+            
+            // Puffer sicherheitshalber noch mal flushen
+            while (Serial1.available()) Serial1.read();
+            
+            clearNextionGraphics();
+            screenHasGraphics = false;
+            
+            // Snake-Puffer für einen sauberen Start leeren
+            ....
+            
+            // Aufnahme aktivieren
+            ....
+        }
+    }
+
+    // 2. Timeout: Wenn die Kugel still liegt (5 Sek. nichts passiert), Aufnahme beenden
+    if (isRecording && screenHasGraphics && (millis() - lastTouchTime > 5000)) {
+        clearNextionGraphics();      
+        screenHasGraphics = false;             
+        isRecording = false; // Aufnahme & Prädiktion stoppen
+        
+        Serial.println("-> Kugel liegt still. Aufnahme beendet.");
+
+        // Snake-Puffer leeren, damit keine alten Punkte gezeichnet werden
+        ....
+    }
+
+    // 3. Nextion Touch-Daten parsen 
+    while (Serial1.available()) {
+        uint8_t b = static_cast<uint8_t>(Serial1.read());
+        
+        if (state == 0) {
+            if (b == 0x68) { 
+                index = 0;
+                state = 1;
+            }
+            continue;
+        }
+        
+        data[index++] = b;
+        if (index < 7) continue; 
+
+        if (data[4] == 0xFF && data[5] == 0xFF && data[6] == 0xFF) {
+            
+            // WICHTIG: Punkte werden nur gezeichnet und für die 
+            // Prädiktion genutzt, wenn 'p' gedrückt wurde (isRecording == true)
+            if (...) {
+                int16_t x = (static_cast<int16_t>(data[1]) << 8) | data[0];
+                int16_t y = (static_cast<int16_t>(data[3]) << 8) | data[2];
+                lastTouchTime = millis();
+                screenHasGraphics = true;
+                
+                if (pathX[9] == -1 || abs(x - pathX[9]) > 2 || abs(y - pathY[9]) > 2) {
+                    
+                    char cmd[64];
+                    if (pathX[0] != -1) {
+                        sprintf(cmd, "cirs %d,%d,6,65535", pathX[0], pathY[0]);
+                        sendNextionCommand(cmd);
+                    }
+                    
+                    for (int i = 0; i < 9; i++) {
+                        pathX[i] = pathX[i+1];
+                        pathY[i] = pathY[i+1];
+                        pathTime[i] = pathTime[i+1]; 
+                    }
+                    
+                    pathX[9] = x;
+                    pathY[9] = y;
+                    pathTime[9] = millis();
+                    
+                    sprintf(cmd, "cirs %d,%d,3,31", x, y);
+                    sendNextionCommand(cmd);
+                    // Starte Prediction nur alle 400ms, um die CPU zu entlasten
+                    if (pathX[0] != -1 && ...) {
+                        ...
+                    }
+                }
+            }
+        }
+        state = 0;
+        index = 0;
+    }
+}
+
+```
+
+### Musterlösung
+
+```cpp
+#include <Arduino.h>
+#include <NextionControl.h>
+#include <MPU6050.h>
+#include <jiggle.h> 
+
+constexpr uint32_t kMonitorBaud = 9600;
+constexpr uint32_t kNextionBaud = 115200;
+
+// ====================================================================
+// --- 1. GLOBALE KONSTANTEN ---
+// ====================================================================
+const int16_t MAX_WIDTH = 800; 
+const int16_t MAX_HEIGHT = 480;
+const float WALL_LEFT = 47.0;
+const float WALL_RIGHT = 748.0;
+const float WALL_TOP = 55.0;
+const float WALL_BOTTOM = 425.0;
 
 // --- KALIBRIERUNG ---
 const float GRAVITY_SCALE = 6500.0; 

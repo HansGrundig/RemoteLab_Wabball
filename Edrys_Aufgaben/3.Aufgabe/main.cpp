@@ -42,7 +42,6 @@ void loop() {
     // Initialisiert mit -1, damit leere Einträge erkennbar sind
     static int16_t pathX[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
     static int16_t pathY[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
-    static uint32_t pathTime[10] = {0}; 
 
     static int16_t lastpathX = -1;
     static int16_t lastpathY = -1;
@@ -51,10 +50,6 @@ void loop() {
 
     const int16_t MAX_WIDTH = 800; 
     const int16_t MAX_HEIGHT = 480;
-
-    static uint32_t lastPointTime = 0; // Verfolgt die Zeit des letzten gültigen Punktes
-    static uint32_t velocity = 0;
-
 
 
     // 1. 5-Sekunden-Reset: Wenn 5s keine Berührung, Bildschirm löschen und zurücksetzen
@@ -127,13 +122,11 @@ void loop() {
                 for (int i = 0; i < 9; i++) {
                     pathX[i] = pathX[i+1];
                     pathY[i] = pathY[i+1];
-                    pathTime[i] = pathTime[i+1]; 
                 }
                 
                 // --- SCHRITT C: NEUEN PUNKT HINZUFÜGEN & ZEICHNEN ---
                 pathX[9] = x;
                 pathY[9] = y;
-                pathTime[9] = millis();
 
                 sprintf(cmd, "cirs %d,%d,3,31", x, y);
                 sendNextionCommand(cmd);

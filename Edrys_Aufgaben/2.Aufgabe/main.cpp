@@ -26,7 +26,8 @@ void setup() {
     delay(100);
     Serial1.begin(kNextionBaud);
     delay(1000);
-
+    Serial.println("System Ready!");
+    Serial.println("-> Druecke 'j' zum Wackeln (Jiggle)");
     clearNextionGraphics();
 }
 
