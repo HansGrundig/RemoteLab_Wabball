@@ -92,6 +92,7 @@ void jiggle(){
       for (int i = 0; i < 3; i++) {
            pos[i] = round((theta(i, hz, nx, ny)) - angOffset); // Calculate servo angles using inversekinematics 
            //Serial.println(pos[i]);}
+           pos[i] = constrain(pos[i], 80, 98);
       //Serial.println("-----");
       servo0.write(pos[0]);
       servo1.write(pos[1]);

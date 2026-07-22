@@ -33,8 +33,7 @@ Da das Labor vollständig remote bedient wird, wurde höchster Wert auf Zugängl
 
 * **Interaktives Lernmaterial via LiaScript:**
   * 🌍 **Mehrsprachigkeit & Übersetzung:** Das Aufgabenblatt ist nativ übersetzbar, wodurch internationale Studierende problemlos teilnehmen können.
-  * 🗣️ **Text-to-Speech (Vorlesefunktion):** Das Lernmaterial unterstützt Screenreader und bietet einen integrierten "Narrator" (Deutsch Female), was sehbehinderten Nutzern und auditiven Lerntypen stark entgegenkommt.
-  * 🧠 **Interaktive Quizzes:** Eingebettete Wissensabfragen (z.B. zur Byte-Größe der UART-Nachrichten) geben den Studierenden direktes Feedback zu ihrem Lernfortschritt.
+  * 🧠 **Interaktive Quizzes:** Eingebettete Wissensabfragen  geben den Studierenden direktes Feedback zu ihrem Lernfortschritt.
 * **Visuelle & Räumliche Assistenz:**
   * ⚡ **Interaktive Schaltpläne:** Ein eigens entwickeltes, farbcodiertes SVG-Schaltdiagramm (`Schema.html`) zeigt Tooltips an, sobald man mit der Maus über Kabel oder Pins fährt. Das verhindert Verdrahtungs-Frust.
   * 🎲 **Integriertes 3D-Modell:** Über die Sketchfab-Integration im Aufgabenblatt können Studierende die Plattform aus jedem Winkel betrachten, um die räumliche Mechanik (inverse Kinematik) der Servos besser  zubegreifen, ohne physisch im Labor zu stehen.
