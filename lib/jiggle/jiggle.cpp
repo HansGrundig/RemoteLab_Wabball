@@ -85,10 +85,10 @@ void jiggle(){
         nx -= step;
         ny += step;
       }
-      Serial.print("nx*10:");
+      /*Serial.print("nx*10:");
       Serial.println(nx*10);
       Serial.print("ny*10:");
-      Serial.println(ny*10); 
+      Serial.println(ny*10);*/ 
       for (int i = 0; i < 3; i++) {
            pos[i] = round((theta(i, hz, nx, ny)) - angOffset); // Calculate servo angles using inversekinematics 
            //Serial.println(pos[i]);}
